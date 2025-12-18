@@ -1,0 +1,112 @@
+[
+  {
+    "id": 1,
+    "species": 1,
+    "location": "湿地中心",
+    "latitude": 39.962632690536815,
+    "longitude": 116.21374085323691,
+    "quantity": 16,
+    "record_time": "2025-12-04 09:18:56.256657+00:00",
+    "risk_level": "high"
+  },
+  {
+    "id": 2,
+    "species": 5,
+    "location": "公园北门",
+    "latitude": 39.845937514726806,
+    "longitude": 116.36742377330093,
+    "quantity": 10,
+    "record_time": "2025-12-04 09:18:56.260241+00:00",
+    "risk_level": "medium"
+  },
+  {
+    "id": 3,
+    "species": 1,
+    "location": "公园北门",
+    "latitude": 39.98912413870801,
+    "longitude": 116.50535620583774,
+    "quantity": 15,
+    "record_time": "2025-12-04 09:18:56.263244+00:00",
+    "risk_level": "high"
+  },
+  {
+    "id": 4,
+    "species": 1,
+    "location": "湿地中心",
+    "latitude": 39.91544581209491,
+    "longitude": 116.5212207880668,
+    "quantity": 6,
+    "record_time": "2025-12-04 09:18:56.265507+00:00",
+    "risk_level": "medium"
+  },
+  {
+    "id": 5,
+    "species": 2,
+    "location": "湖边栈道",
+    "latitude": 39.960746358518556,
+    "longitude": 116.39992404554305,
+    "quantity": 14,
+    "record_time": "2025-12-04 09:18:56.268628+00:00",
+    "risk_level": "medium"
+  },
+  {
+    "id": 6,
+    "species": 1,
+    "location": "树林深处",
+    "latitude": 39.87769149261948,
+    "longitude": 116.45504135342814,
+    "quantity": 8,
+    "record_time": "2025-12-04 09:18:56.271935+00:00",
+    "risk_level": "medium"
+  },
+  {
+    "id": 7,
+    "species": 4,
+    "location": "公园北门",
+    "latitude": 39.806660202508404,
+    "longitude": 116.2608994773392,
+    "quantity": 3,
+    "record_time": "2025-12-04 09:18:56.275311+00:00",
+    "risk_level": "low"
+  },
+  {
+    "id": 8,
+    "species": 2,
+    "location": "树林深处",
+    "latitude": 40.07738293355231,
+    "longitude": 116.51789934633736,
+    "quantity": 2,
+    "record_time": "2025-12-04 09:18:56.277481+00:00",
+    "risk_level": "low"
+  },
+  {
+    "id": 9,
+    "species": 5,
+    "location": "湖边栈道",
+    "latitude": 39.82622967069859,
+    "longitude": 116.52237503724986,
+    "quantity": 2,
+    "record_time": "2025-12-04 09:18:56.280966+00:00",
+    "risk_level": "low"
+  },
+  {
+    "id": 10,
+    "species": 4,
+    "location": "公园北门",
+    "latitude": 40.02426205489821,
+    "longitude": 116.3675413027095,
+    "quantity": 2,
+    "record_time": "2025-12-04 09:18:56.283265+00:00",
+    "risk_level": "low"
+  },
+  {
+    "id": 11,
+    "species": 2,
+    "location": "跑到北端",
+    "latitude": 40.01365936977823,
+    "longitude": 116.20618498111074,
+    "quantity": 22,
+    "record_time": "2025-12-17 12:39:42.337947+00:00",
+    "risk_level": "medium"
+  }
+]

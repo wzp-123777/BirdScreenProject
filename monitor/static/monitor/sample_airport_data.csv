@@ -1,0 +1,4 @@
+ident,name,latitude_deg,longitude_deg,type,iso_country,municipality,icao_code,iata_code
+ZBAA,北京首都国际机场,40.0801,116.584,large_airport,CN,Beijing,ZBAA,PEK
+PEK,北京首都国际机场,40.0801,116.584,large_airport,CN,Beijing,ZBAA,PEK
+ZBAD,北京南苑机场,39.7825,116.388,medium_airport,CN,Beijing,ZBAD,NAY

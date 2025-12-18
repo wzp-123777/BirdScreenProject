@@ -1,0 +1,116 @@
+{% extends 'monitor/base.html' %}
+{% load static %}
+
+{% block content %}
+<h2 class="mb-4" style="color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">鸟情态势仪表盘</h2>
+<div class="row">
+    <div class="col-md-4">
+        <div class="card bg-primary-gradient text-white">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-database me-2"></i>总记录数</h5>
+                <p class="card-text display-4">{{ total_records }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-danger-gradient text-white">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-exclamation-triangle me-2"></i>高风险记录</h5>
+                <p class="card-text display-4">{{ high_risk_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success-gradient text-white">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-calendar-check me-2"></i>今日新增</h5>
+                <p class="card-text display-4">{{ today_count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="fas fa-chart-pie me-2" style="color: #ff9a9e;"></i>鸟种分布 (Top 5)</div>
+            <div class="card-body">
+                <canvas id="speciesChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="fas fa-chart-line me-2" style="color: #84fab0;"></i>近7日活动趋势</div>
+            <div class="card-body">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    fetch("{% url 'api_dashboard_data' %}")
+        .then(response => response.json())
+        .then(data => {
+            // Species Chart
+            new Chart(document.getElementById('speciesChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: data.species_labels,
+                    datasets: [{
+                        data: data.species_values,
+                        backgroundColor: [
+                            '#ff9a9e', 
+                            '#fad0c4', 
+                            '#a18cd1', 
+                            '#fbc2eb', 
+                            '#8fd3f4'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        }
+                    }
+                }
+            });
+
+            // Trend Chart
+            new Chart(document.getElementById('trendChart'), {
+                type: 'line',
+                data: {
+                    labels: data.daily_labels,
+                    datasets: [{
+                        label: '记录数量',
+                        data: data.daily_values,
+                        borderColor: '#a18cd1',
+                        backgroundColor: 'rgba(161, 140, 209, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        });
+</script>
+{% endblock %}

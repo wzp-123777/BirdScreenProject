@@ -1,0 +1,184 @@
+{% extends 'monitor/base.html' %}
+{% load static %}
+
+{% block content %}
+<h2 class="mb-4" style="color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <i class="fas fa-file-alt me-2"></i>导入日志详情
+</h2>
+
+{% if error %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+        </div>
+    </div>
+</div>
+{% else %}
+
+<!-- 日志概览 -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle me-2" style="color: #17a2b8;"></i>日志概览
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h5 class="text-primary">{{ log_entry.file_name }}</h5>
+                            <small class="text-muted">文件名</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            {% if log_entry.log_type == 'bird' %}
+                                <span class="badge bg-info fs-6 p-2">鸟情数据</span>
+                            {% elif log_entry.log_type == 'airport' %}
+                                <span class="badge bg-primary fs-6 p-2">机场数据</span>
+                            {% endif %}
+                            <br><small class="text-muted">导入类型</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <h5 class="text-success">{{ log_entry.success_count }}</h5>
+                            <small class="text-muted">成功导入</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <h5 class="text-danger">{{ log_entry.error_count }}</h5>
+                            <small class="text-muted">导入失败</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            {% if log_entry.status == 'completed' %}
+                                <span class="badge bg-success fs-6 p-2">导入成功</span>
+                            {% elif log_entry.status == 'completed_with_errors' %}
+                                <span class="badge bg-warning text-dark fs-6 p-2">部分成功</span>
+                            {% elif log_entry.status == 'failed' %}
+                                <span class="badge bg-danger fs-6 p-2">导入失败</span>
+                            {% elif log_entry.status == 'processing' %}
+                                <span class="badge bg-info fs-6 p-2">处理中</span>
+                            {% endif %}
+                            <br><small class="text-muted">处理状态</small>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>开始时间:</strong> {{ log_entry.created_at|date:"Y-m-d H:i:s" }}
+                    </div>
+                    {% if log_entry.completed_at %}
+                    <div class="col-md-4">
+                        <strong>完成时间:</strong> {{ log_entry.completed_at|date:"Y-m-d H:i:s" }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>处理耗时:</strong> {{ log_entry.completed_at|timeuntil:log_entry.created_at }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-md-4">
+                        <strong>文件大小:</strong> {{ log_entry.file_size|filesizeformat }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>数据行数:</strong> {{ log_entry.total_rows }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>成功率:</strong>
+                        {% if log_entry.total_rows > 0 %}
+                            {{ log_entry.success_count|div:log_entry.total_rows|mul:100|floatformat:1 }}%
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 处理详情 -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list-alt me-2" style="color: #28a745;"></i>处理详情
+                <div class="float-end">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="toggleDetails()">
+                        <i class="fas fa-expand-alt me-1"></i>切换显示
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <pre id="detailsContent" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; max-height: 400px; overflow-y: auto;">{{ log_entry.details }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 错误信息 -->
+{% if log_entry.error_messages %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <i class="fas fa-exclamation-triangle me-2"></i>错误信息
+                <span class="badge bg-light text-danger ms-2">{{ log_entry.error_count }}</span>
+            </div>
+            <div class="card-body">
+                <pre style="background: #fff5f5; color: #721c24; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{{ log_entry.error_messages }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 返回按钮 -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="text-center">
+            <a href="{% url 'import_logs' %}" class="btn btn-primary">
+                <i class="fas fa-arrow-left me-2"></i>返回日志列表
+            </a>
+            {% if log_entry.log_type == 'bird' %}
+            <a href="{% url 'record_list' %}" class="btn btn-success ms-2">
+                <i class="fas fa-dove me-2"></i>查看鸟情记录
+            </a>
+            {% elif log_entry.log_type == 'airport' %}
+            <a href="{% url 'map_view' %}" class="btn btn-success ms-2">
+                <i class="fas fa-map me-2"></i>查看地图
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleDetails() {
+    const content = document.getElementById('detailsContent');
+    if (content.style.maxHeight === 'none' || content.style.maxHeight === '') {
+        content.style.maxHeight = '400px';
+    } else {
+        content.style.maxHeight = 'none';
+    }
+}
+
+// 如果是处理中的日志，自动刷新
+{% if log_entry.status == 'processing' %}
+setTimeout(() => {
+    location.reload();
+}, 5000); // 5秒后刷新
+{% endif %}
+</script>
+
+{% endif %}
+{% endblock %}

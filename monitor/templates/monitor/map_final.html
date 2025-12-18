@@ -1,0 +1,1025 @@
+{% extends 'monitor/base.html' %}
+{% load static %}
+
+{% block content %}
+<h2 class="mb-4" style="color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <i class="fas fa-globe me-2"></i>3D鸟情地图
+</h2>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-cube me-2"></i>鸟情活动3D分布监控
+                <div class="float-end">
+                    <small>
+                        <i class="fas fa-info-circle me-1"></i>
+                        全机场显示 | 实时位置 | 智能搜索 | 流畅缩放
+                    </small>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- 可拖拽搜索控件 -->
+                <div id="searchPanel" class="position-absolute" style="top: 20px; left: 20px; z-index: 1001; width: 320px; cursor: move; pointer-events: auto;">
+                    <div class="card shadow-lg border-primary">
+                        <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center" style="cursor: move;">
+                            <span><i class="fas fa-search me-1"></i>搜索工具</span>
+                            <div>
+                                <button class="btn btn-sm btn-outline-light me-1" onclick="toggleSearchPanel()" title="折叠/展开">
+                                    <i class="fas fa-chevron-up" id="searchToggleIcon"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-light" onclick="closeSearchPanel()" title="关闭">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-2" id="searchPanelBody">
+                            <!-- 坐标搜索 -->
+                            <div class="mb-2">
+                                <label class="form-label small mb-1">📍 坐标定位</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control" id="coordInput" placeholder="经度,纬度 (如: 116.4074,39.9042)" title="输入经度和纬度，用逗号分隔">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="gotoCoordinates()">
+                                        <i class="fas fa-search-location"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 机场搜索 -->
+                            <div class="mb-2">
+                                <label class="form-label small mb-1">✈️ 机场搜索</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control" id="airportSearch" placeholder="机场代码/名称 (如: PEK, 北京)" title="输入机场代码或名称">
+                                    <button class="btn btn-outline-info btn-sm" onclick="searchAirport()">
+                                        <i class="fas fa-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 结果显示 -->
+                            <div id="searchResults" class="mt-2" style="max-height: 200px; overflow-y: auto; display: none;">
+                                <div id="searchResultsContent"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 可拖拽当前位置信息面板 -->
+                <div id="positionPanel" class="position-absolute" style="top: 20px; right: 20px; z-index: 1000; width: 280px; cursor: move;">
+                    <div class="card shadow-lg border-info">
+                        <div class="card-header bg-info text-white py-2 d-flex justify-content-between align-items-center" style="cursor: move;">
+                            <span><i class="fas fa-location-arrow me-1"></i>当前位置信息</span>
+                            <div>
+                                <button class="btn btn-sm btn-outline-light me-1" onclick="togglePositionPanel()" title="折叠/展开">
+                                    <i class="fas fa-chevron-up" id="positionToggleIcon"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-light" onclick="closePositionPanel()" title="关闭">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-2" id="positionPanelBody">
+                            <div id="currentPosition" class="small">
+                                <div class="text-muted mb-2">
+                                    <i class="fas fa-spinner fa-spin me-1"></i>正在获取位置信息...
+                                </div>
+                                <div id="positionDetails" style="display: none;">
+                                    <div class="mb-1"><strong>经度:</strong> <span id="currentLon">--</span></div>
+                                    <div class="mb-1"><strong>纬度:</strong> <span id="currentLat">--</span></div>
+                                    <div class="mb-1"><strong>高度:</strong> <span id="currentAlt">--</span> m</div>
+                                    <div class="mb-1"><strong>朝向:</strong> <span id="currentHeading">--</span>°</div>
+                                    <div class="mb-1"><strong>俯视:</strong> <span id="currentTilt">--</span>°</div>
+                                    <hr class="my-2">
+                                    <div class="mb-1"><strong>附近机场:</strong> <span id="nearestAirport">--</span></div>
+                                    <div class="mb-1"><strong>鸟情记录:</strong> <span id="nearbyBirds">--</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 视图控制 -->
+                <div class="position-absolute" style="top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-secondary" onclick="resetView()">
+                            <i class="fas fa-home me-1"></i>重置视图
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" id="airportDropdownBtn" title="点击选择要显示的机场类型" onclick="console.log('下拉菜单被点击')">
+                                <i class="fas fa-plane me-1"></i>机场显示 <span class="badge bg-primary">84K+</span>
+                            </button>
+                            <ul class="dropdown-menu shadow-lg">
+                                <li><h6 class="dropdown-header"><i class="fas fa-info-circle me-1"></i>选择机场显示范围</h6></li>
+                                <li><a class="dropdown-item active" href="#" onclick="console.log('点击中国机场'); loadAirports('china')">
+                                    <i class="fas fa-check text-success me-2"></i><strong>中国机场</strong> (750个)
+                                    <small class="text-muted d-block">推荐 - 流畅性能</small>
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="console.log('点击主要机场'); loadAirports('major')">
+                                    <i class="fas fa-building me-2"></i><strong>主要机场</strong> (4,859个)
+                                    <small class="text-muted d-block">枢纽机场</small>
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="console.log('点击精简全球'); loadAirports('simplified')">
+                                    <i class="fas fa-globe-americas me-2"></i><strong>精简全球</strong> (5,000个)
+                                    <small class="text-muted d-block">快速浏览</small>
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header text-warning"><i class="fas fa-exclamation-triangle me-1"></i>大数据集警告</h6></li>
+                                <li><a class="dropdown-item text-warning" href="#" onclick="console.log('点击全球机场'); loadAirports('world')">
+                                    <i class="fas fa-exclamation-triangle me-2"></i><strong>全球机场</strong> (10K显示)
+                                    <small class="text-muted d-block">可能影响性能</small>
+                                </a></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="console.log('点击完整全球'); loadAirports('complete')">
+                                    <i class="fas fa-skull-crossbones me-2"></i><strong>完整全球</strong> (84K全部)
+                                    <small class="text-muted d-block">⚠️ 严重性能影响</small>
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><small class="dropdown-item-text text-muted">
+                                    <i class="fas fa-database me-1"></i>数据来源: OurAirports
+                                </small></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 数据加载状态指示器 -->
+                <div id="dataStatus" class="position-absolute top-0 start-0 p-2 mt-3 ms-3" style="z-index: 1000; background: rgba(0,0,0,0.8); color: white; border-radius: 5px; font-size: 12px;">
+                    <small>
+                        <i class="fas fa-database me-1"></i>
+                        <span id="airportStatus"><i class="fas fa-spinner fa-spin me-1"></i>机场: 加载中...</span><br>
+                        <span id="birdStatus"><i class="fas fa-spinner fa-spin me-1"></i>鸟情: 加载中...</span><br>
+                        <span id="dataSource">数据源: airports.csv</span>
+                    </small>
+                </div>
+
+                <div id="mapView" style="height: 600px; width: 100%; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;"></div>
+            </div>
+            <div class="card-footer bg-light">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <i class="fas fa-mouse-pointer text-primary mb-1"></i>
+                        <br><small><strong>拖拽</strong><br>旋转视角</small>
+                    </div>
+                    <div class="col-md-3">
+                        <i class="fas fa-search-plus text-success mb-1"></i>
+                        <br><small><strong>滚轮</strong><br>放大缩小</small>
+                    </div>
+                    <div class="col-md-3">
+                        <i class="fas fa-arrows-alt text-warning mb-1"></i>
+                        <br><small><strong>搜索</strong><br>定位机场</small>
+                    </div>
+                    <div class="col-md-3">
+                        <i class="fas fa-info-circle text-info mb-1"></i>
+                        <br><small><strong>位置</strong><br>实时信息</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ArcGIS API -->
+<script src="https://js.arcgis.com/4.28/"></script>
+<script>
+console.log("🚀 简化版3D鸟情地图加载...");
+
+// 全局变量
+let view = null;
+let airports = [];
+let birdRecords = [];
+let airportLayer = null;
+let birdLayer = null;
+
+// 基础地图实现
+require([
+    "esri/Map",
+    "esri/views/SceneView",
+    "esri/layers/GraphicsLayer",
+    "esri/Graphic",
+    "esri/geometry/Point",
+    "esri/symbols/SimpleMarkerSymbol",
+    "esri/PopupTemplate"
+], function(Map, SceneView, GraphicsLayer, Graphic, Point, SimpleMarkerSymbol, PopupTemplate) {
+
+    console.log("✅ ArcGIS模块加载成功");
+
+    // 显示机场选择器提示
+    setTimeout(function() {
+        window.showAirportSelectorHint();
+    }, 2000);
+
+    try {
+        // 创建轻量级地图
+        const map = new Map({
+            basemap: "satellite" // 只使用卫星影像，移除地形数据
+        });
+
+        // 创建图层
+        airportLayer = new GraphicsLayer();
+        map.add(airportLayer);
+
+        birdLayer = new GraphicsLayer();
+        map.add(birdLayer);
+
+        console.log("✅ 图层创建成功");
+
+        // 创建轻量级3D视图
+        view = new SceneView({
+            container: "mapView",
+            map: map,
+            camera: {
+                position: [117.346000671, 39.1244010925, 1000], // 天津机场坐标，降低高度减少复杂度
+                heading: 0,
+                tilt: 15 // 降低倾角，减少3D计算
+            },
+            qualityProfile: "low", // 使用最低质量以提高性能
+            pixelRatio: 1 // 降低像素密度
+        });
+
+        console.log("✅ SceneView创建成功");
+
+        // 定义全局函数
+        window.showAirportSelectorHint = function() {
+            // 检查是否已经显示过提示
+            if (localStorage.getItem('airportHintShown')) {
+                return;
+            }
+
+            // 创建提示框
+            const hintHtml = `
+                <div id="airportHint" class="alert alert-info alert-dismissible position-fixed" style="top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <h6 class="alert-heading"><i class="fas fa-plane me-2"></i>全球机场功能</h6>
+                    <p class="mb-2">现在支持显示全球84,294个机场！</p>
+                    <div class="mb-3">
+                        <strong>点击上方"机场显示"按钮选择:</strong>
+                        <ul class="mb-2 mt-2">
+                            <li><small>🟦 中国机场 (750个) - 默认</small></li>
+                            <li><small>🟨 主要机场 (4,859个)</small></li>
+                            <li><small>🟩 精简全球 (5,000个)</small></li>
+                            <li><small>🟨 全球机场 (10K显示)</small></li>
+                            <li><small>🔴 完整全球 (84K全部)</small></li>
+                        </ul>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm" onclick="highlightAirportButton()">
+                            <i class="fas fa-hand-pointer me-1"></i>找到按钮
+                        </button>
+                        <button class="btn btn-secondary btn-sm" data-bs-dismiss="alert">
+                            知道了
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', hintHtml);
+
+            // 标记已显示
+            localStorage.setItem('airportHintShown', 'true');
+        };
+
+        window.highlightAirportButton = function() {
+            const btn = document.getElementById('airportDropdownBtn');
+            if (btn) {
+                // 高亮按钮
+                btn.style.animation = 'pulse 1s infinite';
+                btn.style.boxShadow = '0 0 20px rgba(0, 123, 255, 0.8)';
+                btn.style.borderColor = '#007bff';
+
+                // 3秒后恢复正常
+                setTimeout(() => {
+                    btn.style.animation = '';
+                    btn.style.boxShadow = '';
+                    btn.style.borderColor = '';
+                }, 3000);
+
+                // 关闭提示框
+                const hint = document.getElementById('airportHint');
+                if (hint) {
+                    hint.remove();
+                }
+            }
+        };
+
+        // 加载数据 - 默认加载中国机场
+        loadAirports('china');
+        loadBirdRecords();
+
+        // 机场数据加载函数 - 支持不同数据源
+        function loadAirports(source = 'china') {
+            console.log(`📍 开始加载机场数据 (${source})...`);
+            console.log('airportLayer存在:', typeof airportLayer);
+            console.log('airportLayer对象:', airportLayer);
+
+            // 检查airportLayer是否已初始化
+            if (!airportLayer) {
+                console.error('❌ airportLayer未初始化，无法加载机场数据');
+                alert('地图图层未初始化，请刷新页面重试');
+                return;
+            }
+
+            // 清除现有机场标记
+            try {
+                airportLayer.removeAll();
+                console.log('✅ 清除现有机场标记成功');
+            } catch (error) {
+                console.error('❌ 清除机场标记失败:', error);
+            }
+
+            let url, displayName, maxDisplay;
+
+            switch(source) {
+                case 'china':
+                    url = '{% static "monitor/airports_china.json" %}';
+                    displayName = '中国机场';
+                    maxDisplay = null; // 显示全部
+                    break;
+                case 'major':
+                    url = '{% static "monitor/airports_major.json" %}';
+                    displayName = '主要机场';
+                    maxDisplay = 200; // 限制显示数量避免卡顿
+                    break;
+                case 'simplified':
+                    url = '{% static "monitor/airports_simplified.json" %}';
+                    displayName = '精简全球机场';
+                    maxDisplay = 500; // 限制显示数量
+                    break;
+                case 'world':
+                    // 使用包含10,000个机场的世界数据集
+                    alert('⚠️ 显示全球机场 (10,000个) 可能会影响地图性能！\n\n如果地图变得很卡，请切换到其他显示选项。');
+                    url = '{% static "monitor/airports_world.json" %}';
+                    displayName = '全球机场';
+                    maxDisplay = 2000; // 限制显示前2000个以保证性能
+                    break;
+                case 'complete':
+                    // 使用包含全部84,294个机场的完整数据集
+                    const confirmed = confirm('⚠️ 警告：显示完整全球机场 (84,294个) 将会：\n\n' +
+                        '• 加载24.7MB的数据文件\n' +
+                        '• 在地图上显示8万多个标记\n' +
+                        '• 严重影响地图性能和响应速度\n' +
+                        '• 可能导致浏览器卡死或崩溃\n\n' +
+                        '建议使用其他选项获得更好的体验。\n\n确定要继续吗？');
+
+                    if (!confirmed) {
+                        return; // 用户取消，不加载
+                    }
+
+                    alert('正在加载完整全球机场数据...\n\n这可能需要一些时间，请耐心等待。');
+                    url = '{% static "monitor/airports_all.json" %}';
+                    displayName = '完整全球机场';
+                    maxDisplay = 5000; // 限制初始显示5000个，避免完全卡死
+                    break;
+                default:
+                    url = '{% static "monitor/airports_china.json" %}';
+                    displayName = '中国机场';
+                    maxDisplay = null;
+            }
+
+            // 显示加载状态
+            document.getElementById('airportStatus').innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i>${displayName}: 加载中...`;
+
+            console.log('正在请求URL:', url);
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const totalCount = data.features.length;
+                    console.log(`✅ 从本地文件加载了 ${totalCount} 个${displayName}`);
+
+                    // 转换为内部格式
+                    airports = data.features.map(feature => ({
+                        ...feature.properties,
+                        latitude: feature.geometry.coordinates[1],
+                        longitude: feature.geometry.coordinates[0]
+                    }));
+
+                    // 确定显示数量
+                    const displayCount = maxDisplay ? Math.min(maxDisplay, airports.length) : airports.length;
+
+                    // 显示机场标记
+                    for (let i = 0; i < displayCount; i++) {
+                        addAirportPoint(airports[i]);
+                    }
+
+                    // 更新状态显示
+                    const statusText = maxDisplay && displayCount < totalCount ?
+                        `${displayName}: ${displayCount}/${totalCount}个 ✓` :
+                        `${displayName}: ${displayCount}个 ✓`;
+
+                    document.getElementById('airportStatus').innerHTML = `<i class="fas fa-check-circle text-success me-1"></i>${statusText}`;
+
+                    console.log(`📍 已显示 ${displayCount} 个${displayName}标记`);
+
+                    // 根据数据源类型给出不同的警告和信息
+                    if (source === 'world' && displayCount < totalCount) {
+                        setTimeout(() => {
+                            alert(`⚠️ 性能警告：\n\n全球机场数据量较大，已限制显示${displayCount}/${totalCount}个机场。\n\n如需查看更多机场，请使用"完整全球"选项，但这会严重影响性能。`);
+                        }, 1000);
+                    } else if (source === 'complete') {
+                        if (displayCount < totalCount) {
+                            setTimeout(() => {
+                                alert(`🚨 性能严重警告：\n\n完整全球机场数据已加载${totalCount}个机场，但为了保护性能，只显示前${displayCount}个标记。\n\n• 总机场数：${totalCount.toLocaleString()}\n• 当前显示：${displayCount.toLocaleString()}\n• 隐藏机场：${(totalCount - displayCount).toLocaleString()}\n\n地图可能变得非常卡顿，建议切换到其他显示选项。`);
+                            }, 2000);
+                        } else {
+                            setTimeout(() => {
+                                alert(`🚨 极端性能警告：\n\n您正在显示全部${totalCount.toLocaleString()}个全球机场！\n\n• 数据大小：24.7MB\n• 标记数量：${totalCount.toLocaleString()}\n• 预期影响：严重卡顿\n\n建议立即切换到其他显示选项以恢复正常性能。`);
+                            }, 3000);
+                        }
+                    }
+
+                    // 更新下拉菜单激活状态
+                    updateAirportMenuActive(source);
+                })
+                .catch(error => {
+                    console.error(`❌ 加载${displayName}数据失败:`, error);
+                    console.error('错误详情:', error.message);
+                    console.error('错误堆栈:', error.stack);
+                    document.getElementById('airportStatus').innerHTML = `<i class="fas fa-times-circle text-danger me-1"></i>${displayName}: 加载失败 ✗`;
+
+                    alert(`加载${displayName}数据失败: ${error.message}\n\n请检查网络连接或刷新页面重试。`);
+
+                    // 如果主要数据源失败，尝试备用数据源
+                    if (source === 'china') {
+                        console.log('🔄 尝试加载备用机场数据...');
+                        setTimeout(() => loadAirports('major'), 1000);
+                    }
+                });
+        }
+
+        // 将函数暴露到全局作用域
+        window.loadAirports = loadAirports;
+        window.showAirportSelectorHint = showAirportSelectorHint;
+        window.highlightAirportButton = highlightAirportButton;
+        console.log("✅ 所有函数已暴露到全局作用域");
+
+        function loadBirdRecords() {
+            console.log("🐦 开始加载鸟情数据...");
+
+            fetch('{% static "monitor/bird_records_local.json" %}')
+                .then(response => response.json())
+                .then(data => {
+                    console.log(`✅ 从本地文件加载了 ${data.length} 条鸟情记录`);
+                    birdRecords = data;
+                    document.getElementById('birdStatus').innerHTML = `<i class="fas fa-check-circle text-success me-1"></i>鸟情: ${data.length}条 ✓`;
+
+                    data.forEach(record => {
+                        if (record.latitude && record.longitude) {
+                            addBirdPoint(record);
+                        }
+                    });
+
+                    console.log(`🐦 已显示 ${data.length} 个鸟情标记`);
+                })
+                .catch(error => {
+                    console.error('❌ 加载鸟情数据失败:', error);
+                    document.getElementById('birdStatus').innerHTML = `<i class="fas fa-times-circle text-danger me-1"></i>鸟情: 加载失败 ✗`;
+                });
+        }
+
+        function addAirportPoint(airport) {
+            const point = new Point({
+                longitude: airport.longitude,
+                latitude: airport.latitude
+            });
+
+            // 根据机场类型设置不同大小的蓝色菱形标记
+            let size = 8;
+            let color = [0, 123, 255, 0.8]; // 默认蓝色
+
+            if (airport.airport_type === 'large_airport') {
+                size = 12;
+                color = [0, 123, 255, 1.0]; // 大型机场更深蓝色
+            } else if (airport.airport_type === 'medium_airport') {
+                size = 10;
+                color = [0, 123, 255, 0.9]; // 中型机场标准蓝色
+            }
+
+            const symbol = new SimpleMarkerSymbol({
+                style: "diamond",
+                color: color,
+                size: size,
+                outline: { color: [255, 255, 255, 1], width: 2 }
+            });
+
+            const graphic = new Graphic({
+                geometry: point,
+                symbol: symbol,
+                attributes: airport,
+                popupTemplate: new PopupTemplate({
+                    title: `${airport.name} (${airport.ident})`,
+                    content: `
+                        <div>
+                            <p><strong>类型:</strong> ${airport.airport_type}</p>
+                            <p><strong>城市:</strong> ${airport.municipality}</p>
+                            <p><strong>坐标:</strong> ${airport.longitude.toFixed(4)}, ${airport.latitude.toFixed(4)}</p>
+                            ${airport.iata_code ? `<p><strong>IATA:</strong> ${airport.iata_code}</p>` : ''}
+                            ${airport.elevation_ft ? `<p><strong>海拔:</strong> ${airport.elevation_ft} ft</p>` : ''}
+                        </div>
+                    `
+                })
+            });
+
+            airportLayer.add(graphic);
+        }
+
+        function addBirdPoint(record) {
+            const point = new Point({
+                longitude: record.longitude,
+                latitude: record.latitude
+            });
+
+            let color = [128, 128, 128, 0.8];
+            if (record.risk_level === 'high') {
+                color = [255, 0, 0, 0.9];
+            } else if (record.risk_level === 'medium') {
+                color = [255, 255, 0, 0.9];
+            } else if (record.risk_level === 'low') {
+                color = [0, 255, 0, 0.9];
+            }
+
+            const symbol = new SimpleMarkerSymbol({
+                style: "circle",
+                color: color,
+                size: 8, // 减小鸟情标记尺寸以提高性能
+                outline: { color: [255, 255, 255, 1], width: 1 }
+            });
+
+            const graphic = new Graphic({
+                geometry: point,
+                symbol: symbol,
+                attributes: record,
+                popupTemplate: new PopupTemplate({
+                    title: `${record.species || '鸟类'} - ${record.risk_level === 'high' ? '高风险' : record.risk_level === 'medium' ? '中风险' : '低风险'}`,
+                    content: `
+                        <div>
+                            <p><strong>位置:</strong> ${record.location}</p>
+                            <p><strong>数量:</strong> ${record.quantity} 只</p>
+                            <p><strong>经纬度:</strong> ${record.longitude.toFixed(4)}, ${record.latitude.toFixed(4)}</p>
+                        </div>
+                    `
+                })
+            });
+
+            birdLayer.add(graphic);
+        }
+
+        // 位置信息更新
+        view.watch(["camera", "center"], function() {
+            updateCurrentPosition();
+        });
+
+        function updateCurrentPosition() {
+            if (!view) return;
+
+            try {
+                const camera = view.camera;
+                const center = view.center;
+
+                document.getElementById('currentLon').textContent = center ? center.longitude.toFixed(6) : '--';
+                document.getElementById('currentLat').textContent = center ? center.latitude.toFixed(6) : '--';
+                document.getElementById('currentAlt').textContent = camera ? Math.round(camera.position.z) : '--';
+                document.getElementById('currentHeading').textContent = camera ? Math.round(camera.heading) : '--';
+                document.getElementById('currentTilt').textContent = camera ? Math.round(camera.tilt) : '--';
+
+                // 查找附近机场
+                if (center && airports.length > 0) {
+                    let nearest = null;
+                    let minDist = Infinity;
+
+                    airports.forEach(airport => {
+                        const dist = Math.sqrt(
+                            Math.pow(center.longitude - airport.longitude, 2) +
+                            Math.pow(center.latitude - airport.latitude, 2)
+                        );
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearest = airport;
+                        }
+                    });
+
+                    if (nearest) {
+                        document.getElementById('nearestAirport').textContent =
+                            `${nearest.name} (${nearest.ident}) - ${(minDist * 111).toFixed(1)}km`;
+                    }
+                }
+
+                // 计算可见鸟情记录
+                if (center && birdRecords.length > 0) {
+                    const extent = view.extent;
+                    let count = 0;
+
+                    if (extent) {
+                        birdRecords.forEach(record => {
+                            if (record.longitude >= extent.xmin && record.longitude <= extent.xmax &&
+                                record.latitude >= extent.ymin && record.latitude <= extent.ymax) {
+                                count++;
+                            }
+                        });
+                    }
+
+                    document.getElementById('nearbyBirds').textContent = `${count} 条`;
+                }
+
+                document.getElementById('currentPosition').querySelector('.text-muted').style.display = 'none';
+                document.getElementById('positionDetails').style.display = 'block';
+
+            } catch (error) {
+                console.error('位置更新错误:', error);
+            }
+        }
+
+        // 视图加载完成
+        view.when(function() {
+            console.log("🎉 简化版3D地图加载完成！");
+
+            // 添加成功提示
+            const successDiv = document.createElement('div');
+            successDiv.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 123, 255, 0.95);
+                color: white;
+                padding: 20px;
+                border-radius: 15px;
+                z-index: 2000;
+                font-size: 18px;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+                text-align: center;
+                max-width: 400px;
+            `;
+            successDiv.innerHTML = `
+                <i class="fas fa-check-circle" style="font-size: 48px; margin-bottom: 15px;"></i><br>
+                <strong>简化版3D地图加载成功！</strong><br>
+                <small style="opacity: 0.9;">
+                    ✓ 轻量级卫星地图<br>
+                    ✓ 机场数据标记<br>
+                    ✓ 鸟情风险显示<br>
+                    ✓ 实时位置信息<br>
+                    ✓ 智能搜索功能
+                </small>
+            `;
+            document.getElementById('mapView').appendChild(successDiv);
+
+            setTimeout(() => {
+                if (successDiv.parentNode) {
+                    successDiv.parentNode.removeChild(successDiv);
+                }
+            }, 6000);
+
+        }).catch(function(error) {
+            console.error("❌ 地图加载失败:", error);
+
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(220, 53, 69, 0.95);
+                color: white;
+                padding: 20px;
+                border-radius: 15px;
+                text-align: center;
+                z-index: 2000;
+                max-width: 400px;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            `;
+            errorDiv.innerHTML = `
+                <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px;"></i><br>
+                <strong>地图加载失败</strong><br>
+                <small>${error.message}</small><br>
+                <small style="opacity: 0.8;">请刷新页面重试</small>
+            `;
+            document.getElementById('mapView').appendChild(errorDiv);
+        });
+
+    } catch (e) {
+        console.error("❌ 创建地图时出错:", e);
+
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(220, 53, 69, 0.95);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 2000;
+            max-width: 400px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        `;
+        errorDiv.innerHTML = `
+            <i class="fas fa-times-circle" style="font-size: 48px; margin-bottom: 15px;"></i><br>
+            <strong>地图创建失败</strong><br>
+            <small>${e.message}</small>
+        `;
+        document.getElementById('mapView').appendChild(errorDiv);
+    }
+
+});
+
+// ==================== 视图控制 ====================
+function resetView() {
+    if (view) {
+        view.goTo({
+            camera: {
+                position: [117.346000671, 39.1244010925, 1000],
+                heading: 0,
+                tilt: 15
+            }
+        });
+        console.log('视图已重置到天津机场');
+    }
+}
+
+    // 定义全局函数
+
+function updateAirportMenuActive(activeSource) {
+    // 更新下拉菜单中的激活状态
+    const menuItems = document.querySelectorAll('.dropdown-menu .dropdown-item');
+    menuItems.forEach(item => {
+        item.classList.remove('active');
+        const checkIcon = item.querySelector('.fa-check');
+        if (checkIcon) {
+            checkIcon.remove();
+        }
+    });
+
+    // 找到对应的菜单项并激活
+    const activeItem = document.querySelector(`.dropdown-menu .dropdown-item[onclick*="${activeSource}"]`);
+    if (activeItem) {
+        activeItem.classList.add('active');
+        // 添加选中图标
+        const iconHtml = '<i class="fas fa-check text-success me-2"></i>';
+        activeItem.innerHTML = iconHtml + activeItem.textContent.replace('✓', '').trim();
+    }
+}
+
+// ==================== 面板拖拽和折叠功能 ====================
+
+// 搜索面板拖拽
+let searchPanelDrag = false;
+let searchPanelOffsetX = 0;
+let searchPanelOffsetY = 0;
+
+document.getElementById('searchPanel').addEventListener('mousedown', function(e) {
+    // 只有在面板标题栏上才能拖拽，避免影响输入框
+    if (e.target.closest('.card-header') && !e.target.closest('button')) {
+        searchPanelDrag = true;
+        const rect = this.getBoundingClientRect();
+        searchPanelOffsetX = e.clientX - rect.left;
+        searchPanelOffsetY = e.clientY - rect.top;
+
+        this.style.cursor = 'grabbing';
+        e.preventDefault();
+    }
+});
+
+document.addEventListener('mousemove', function(e) {
+    if (searchPanelDrag) {
+        const panel = document.getElementById('searchPanel');
+        const newLeft = e.clientX - searchPanelOffsetX;
+        const newTop = e.clientY - searchPanelOffsetY;
+
+        const maxLeft = window.innerWidth - panel.offsetWidth - 10;
+        const maxTop = window.innerHeight - panel.offsetHeight - 10;
+
+        panel.style.left = Math.max(10, Math.min(newLeft, maxLeft)) + 'px';
+        panel.style.top = Math.max(10, Math.min(newTop, maxTop)) + 'px';
+    }
+});
+
+document.addEventListener('mouseup', function() {
+    searchPanelDrag = false;
+    document.getElementById('searchPanel').style.cursor = 'move';
+});
+
+// 位置面板拖拽
+let positionPanelDrag = false;
+let positionPanelOffsetX = 0;
+let positionPanelOffsetY = 0;
+
+document.getElementById('positionPanel').addEventListener('mousedown', function(e) {
+    // 只有在面板标题栏上才能拖拽，避免影响显示内容
+    if (e.target.closest('.card-header') && !e.target.closest('button')) {
+        positionPanelDrag = true;
+        const rect = this.getBoundingClientRect();
+        positionPanelOffsetX = e.clientX - rect.left;
+        positionPanelOffsetY = e.clientY - rect.top;
+
+        this.style.cursor = 'grabbing';
+        e.preventDefault();
+    }
+});
+
+document.addEventListener('mousemove', function(e) {
+    if (positionPanelDrag) {
+        const panel = document.getElementById('positionPanel');
+        const newLeft = e.clientX - positionPanelOffsetX;
+        const newTop = e.clientY - positionPanelOffsetY;
+
+        const maxLeft = window.innerWidth - panel.offsetWidth - 10;
+        const maxTop = window.innerHeight - panel.offsetHeight - 10;
+
+        panel.style.left = Math.max(10, Math.min(newLeft, maxLeft)) + 'px';
+        panel.style.top = Math.max(10, Math.min(newTop, maxTop)) + 'px';
+    }
+});
+
+document.addEventListener('mouseup', function() {
+    positionPanelDrag = false;
+    document.getElementById('positionPanel').style.cursor = 'move';
+});
+
+// 面板折叠/展开功能
+function toggleSearchPanel() {
+    const body = document.getElementById('searchPanelBody');
+    const icon = document.getElementById('searchToggleIcon');
+
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        icon.className = 'fas fa-chevron-up';
+    } else {
+        body.style.display = 'none';
+        icon.className = 'fas fa-chevron-down';
+    }
+}
+
+function togglePositionPanel() {
+    const body = document.getElementById('positionPanelBody');
+    const icon = document.getElementById('positionToggleIcon');
+
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        icon.className = 'fas fa-chevron-up';
+    } else {
+        body.style.display = 'none';
+        icon.className = 'fas fa-chevron-down';
+    }
+}
+
+// 关闭面板功能
+function closeSearchPanel() {
+    const panel = document.getElementById('searchPanel');
+    panel.style.display = 'none';
+
+    if (!document.getElementById('showSearchPanelBtn')) {
+        const btn = document.createElement('button');
+        btn.id = 'showSearchPanelBtn';
+        btn.className = 'btn btn-primary btn-sm position-absolute';
+        btn.style.cssText = 'top: 20px; left: 20px; z-index: 999;';
+        btn.innerHTML = '<i class="fas fa-search"></i> 搜索';
+        btn.onclick = function() {
+            panel.style.display = 'block';
+            this.remove();
+        };
+        document.getElementById('mapView').parentNode.appendChild(btn);
+    }
+}
+
+function closePositionPanel() {
+    const panel = document.getElementById('positionPanel');
+    panel.style.display = 'none';
+
+    if (!document.getElementById('showPositionPanelBtn')) {
+        const btn = document.createElement('button');
+        btn.id = 'showPositionPanelBtn';
+        btn.className = 'btn btn-info btn-sm position-absolute';
+        btn.style.cssText = 'top: 20px; right: 20px; z-index: 999;';
+        btn.innerHTML = '<i class="fas fa-location-arrow"></i> 位置';
+        btn.onclick = function() {
+            panel.style.display = 'block';
+            this.remove();
+        };
+        document.getElementById('mapView').parentNode.appendChild(btn);
+    }
+}
+
+// ==================== 搜索功能 ====================
+function gotoCoordinates() {
+    const coordText = document.getElementById('coordInput').value.trim();
+    if (!coordText) {
+        alert('请输入坐标！');
+        return;
+    }
+
+    const coords = coordText.split(',');
+    if (coords.length !== 2) {
+        alert('格式错误！请使用 "经度,纬度" 格式。');
+        return;
+    }
+
+    const lon = parseFloat(coords[0].trim());
+    const lat = parseFloat(coords[1].trim());
+
+    if (isNaN(lon) || isNaN(lat)) {
+        alert('坐标值无效！');
+        return;
+    }
+
+    if (view) {
+        view.goTo({
+            center: [lon, lat],
+            zoom: 12
+        });
+        console.log(`📍 跳转到坐标: ${lon}, ${lat}`);
+    }
+}
+
+function searchAirport() {
+    const searchText = document.getElementById('airportSearch').value.trim().toLowerCase();
+    if (!searchText) {
+        alert('请输入机场名称或代码！');
+        return;
+    }
+
+    if (airports.length === 0) {
+        alert('机场数据还未加载完成');
+        return;
+    }
+
+    const matches = airports.filter(airport =>
+        airport.ident.toLowerCase().includes(searchText) ||
+        airport.name.toLowerCase().includes(searchText) ||
+        (airport.iata_code && airport.iata_code.toLowerCase().includes(searchText))
+    );
+
+    if (matches.length === 0) {
+        alert('未找到匹配的机场！');
+        return;
+    }
+
+    if (matches.length === 1) {
+        const airport = matches[0];
+        if (view) {
+            view.goTo({
+                center: [airport.longitude, airport.latitude],
+                zoom: 14
+            });
+        }
+        return;
+    }
+
+    // 显示搜索结果
+    const resultsDiv = document.getElementById('searchResults');
+    const resultsContent = document.getElementById('searchResultsContent');
+
+    let html = '<div class="small">';
+    matches.slice(0, 5).forEach(airport => {
+        html += `<div class="p-1 border-bottom" style="cursor: pointer;" onclick="gotoAirport(${airport.longitude}, ${airport.latitude}, '${airport.name}')">`;
+        html += `<strong>${airport.name}</strong> (${airport.ident})`;
+        if (airport.iata_code) html += ` - ${airport.iata_code}`;
+        html += `<br><small class="text-muted">${airport.municipality}</small>`;
+        html += '</div>';
+    });
+    html += '</div>';
+
+    resultsContent.innerHTML = html;
+    resultsDiv.style.display = 'block';
+}
+
+function gotoAirport(lon, lat, name) {
+    if (view) {
+        view.goTo({
+            center: [lon, lat],
+            zoom: 14
+        });
+        console.log(`✈️ 跳转到机场: ${name}`);
+        document.getElementById('searchResults').style.display = 'none';
+    }
+}
+
+// 绑定回车键
+document.getElementById('coordInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') gotoCoordinates();
+});
+
+document.getElementById('airportSearch').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') searchAirport();
+});
+
+// ==================== 优化缩放功能 ====================
+document.addEventListener('wheel', function(e) {
+    const mapView = document.getElementById('mapView');
+    const rect = mapView.getBoundingClientRect();
+    const isInMap = (e.clientX >= rect.left && e.clientX <= rect.right &&
+                     e.clientY >= rect.top && e.clientY <= rect.bottom);
+
+    if (isInMap) {
+        return; // 在地图内允许缩放
+    } else if (e.ctrlKey) {
+        e.preventDefault(); // 在地图外阻止页面缩放
+        return false;
+    }
+}, { passive: false });
+</script>
+
+{% endblock %}

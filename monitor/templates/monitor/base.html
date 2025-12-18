@@ -1,0 +1,205 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机场鸟情分析与预警系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%);
+            min-height: 100vh;
+            background-attachment: fixed;
+        }
+
+        /* Glassmorphism Sidebar */
+        .sidebar {
+            min-height: 90vh;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            padding: 30px 20px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        }
+
+        .sidebar h3 {
+            color: #6a11cb;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.5rem;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+        }
+
+        .nav-link {
+            color: #555;
+            font-weight: 600;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+            padding: 12px 20px;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.8);
+            color: #2575fc;
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(to right, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 117, 252, 0.4);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            padding: 20px;
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-header {
+            background-color: rgba(255, 255, 255, 0.5);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            font-weight: bold;
+            color: #444;
+            font-size: 1.1rem;
+            padding: 15px 20px;
+        }
+
+        /* Custom Colors for Stats Cards */
+        .bg-primary-gradient {
+            background: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%);
+            color: #fff !important;
+        }
+        .bg-danger-gradient {
+            background: linear-gradient(to top, #ff0844 0%, #ffb199 100%);
+            color: #fff !important;
+        }
+        .bg-success-gradient {
+            background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+            color: #fff !important;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .display-4 {
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /* Tables */
+        .table {
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        .table thead th {
+            background-color: rgba(106, 17, 203, 0.1);
+            border: none;
+            color: #555;
+        }
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(to right, #6a11cb 0%, #2575fc 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 30px;
+            box-shadow: 0 4px 15px rgba(37, 117, 252, 0.4);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 117, 252, 0.6);
+        }
+
+        /* Form Controls */
+        .form-control, .form-select {
+            border-radius: 15px;
+            border: 1px solid rgba(0,0,0,0.1);
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 12px;
+        }
+        .form-control:focus, .form-select:focus {
+            box-shadow: 0 0 0 0.25rem rgba(106, 17, 203, 0.25);
+            border-color: #a1c4fd;
+        }
+        /* 按钮高亮动画 */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2">
+                <div class="sidebar text-center">
+                    <h3><i class="fas fa-dove"></i> 鸟情预警</h3>
+                    <hr style="opacity: 0.2">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard' %}"><i class="fas fa-chart-pie me-2"></i> 态势看板</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'record_list' %}"><i class="fas fa-list-ul me-2"></i> 记录管理</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'add_record' %}"><i class="fas fa-plus-circle me-2"></i> 新增记录</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'map_final' %}"><i class="fas fa-globe me-2"></i> 3D鸟情地图</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'import_xls' %}"><i class="fas fa-upload me-2"></i> 导入数据</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'logs' %}"><i class="fas fa-history me-2"></i> 日志</a>
+                        </li>
+                    </ul>
+                    
+                    <div style="margin-top: auto; padding-top: 20px; text-align: center; font-size: 0.8rem; color: #888;">
+                        <p>System v1.0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-10 main-content">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
